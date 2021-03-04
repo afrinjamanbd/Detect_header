@@ -72,11 +72,12 @@ def font_tags(font_counts, styles):
             idx = 0
             size_tag[size] = '<p>'
         if size > p_size:
-            size_tag[size] = '<pdftodocH{0}>'.format(idx)
+            size_tag[size] = '<HEADER_{0}>'.format(idx)
         elif size < p_size:
             size_tag[size] = '<s{0}>'.format(idx)
 
     return size_tag
+
 
 def headers_para(doc, size_tag,starting, ending):
     """Scrapes headers & paragraphs from PDF and return texts with element tags.
@@ -130,28 +131,54 @@ def headers_para(doc, size_tag,starting, ending):
 
     return header_para
 
-document_save = Document()
-startingstr = input('Enter starting page: ')
-endingstr = input('Enter ending page: ')
-starting = int(startingstr)
-ending = int(endingstr)
-document = 'EntireFIle.pdf'
+
+def is_ascii(s):
+    """Returns char if it is ascii.
+    :param s: single character of a string
+    :type : char
+    :rtype: char
+    :return: ascii character
+    """
+    return all(ord(c) < 128 for c in s)
+
+
+print("Enter file name without extension.")
+doc_name = input('Enter your pdf file name here: ')
+print("Starting page number has to be greater than 0.")
+start_str = input('Enter starting page number: ')
+end_str = input('Enter ending page number: ')
+
+document = doc_name + '.pdf'
+starting = int(start_str)
+ending = int(end_str)
+elements = []
+
 doc = fitz.open(document)
+document_save = Document()
 font_counts, styles = fonts(doc, granularity=False)
 size_tag = font_tags(font_counts, styles)
-elements = []
-elements = headers_para(doc, size_tag, starting-1, ending)
-print("Total lines are " + str(len(elements)))
+elements = headers_para(doc, size_tag, starting - 1, ending)
 
-print("Adding the header font tags from page "+startingstr+" to "+endingstr)
-document_save.add_paragraph("List of the header font tags from page "+startingstr+" to "+endingstr+" with headers")
+print("Total lines are " + str(len(elements)))
+print("Adding the header font tags from page "+start_str+" to "+end_str)
+document_save.add_paragraph("List of the header font tags from page "+start_str+" to "+end_str+" with headers")
 
 for each_element in elements:
-    if "<pdftodocH" in each_element:
+    if "<HEADER_" in each_element:
         try:
             document_save.add_paragraph(each_element)
+            document_save.save("tag.docx")
         except Exception as e:
+            new_str = ""
             print(e)
             print(each_element)
-    document_save.save("tag.docx")
+            try:
+                for chars in each_element:
+                    if is_ascii(chars):
+                        new_str = new_str + chars
+                document_save.add_paragraph(new_str)
+                document_save.save("tag.docx")
+            except Exception as en:
+                print(en)
+
 print("\n\nPlease check tag.docx file to get the header tags for different header fonts.\n")
